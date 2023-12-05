@@ -1,6 +1,7 @@
+import datetime
 import pymysql
 
-#mysql工具类
+# mysql工具类
 class MySQL(object):
     def __init__(self, host: str, user: str, password: str, database: str, port: int):
         """连接到MySQL数据库"""
@@ -18,21 +19,48 @@ class MySQL(object):
     def connect(self):
         self.connection.connect()
 
-    def insert(self, table_name, fields, data):
+    def insert(self, table_name: str, fields: list, data: list):
         """批量插入"""
         self.connection.connect()
         cursor = self.connection.cursor()
         keystr = ""
-        valstr = ""
         for i in range(0, len(fields)):
             if i < len(fields)-1:
                 keystr = keystr+fields[i]+","
-                valstr = valstr + "%s,"
             else:
                 keystr = keystr+fields[i]
-                valstr = valstr + "%s"
-        insert_sql = f"INSERT INTO {table_name} ({keystr}) VALUES ({valstr})"
-        cursor.executemany(insert_sql, data)
+        valstr = ""
+        for i in range(0, len(data)):
+            valstr = valstr+"("
+            for j in range(0, len(fields)):
+                d = data[i][j]
+                if j < len(fields)-1:
+                    if d is None:
+                        valstr = valstr+"null,"
+                    else:
+                        if isinstance(d, str):
+                            valstr = valstr+"'"+d+"',"
+                        elif isinstance(d, (datetime.datetime, datetime.date, datetime.timedelta)):
+                            valstr = valstr+"'"+str(d)+"',"
+                        else:
+                            valstr = valstr+str(d)+","
+                else:
+                    if d is None:
+                        valstr = valstr+"null"
+                    else:
+                        if isinstance(d, str):
+                            valstr = valstr+"'"+d+"'"
+                        elif isinstance(d, (datetime.datetime, datetime.date, datetime.timedelta)):
+                            valstr = valstr+"'"+str(d)+"'"
+                        else:
+                            valstr = valstr+str(d)
+            if i < len(data)-1:
+                valstr = valstr+"),"
+            else:
+                valstr = valstr+")"
+
+        insert_sql = f"INSERT INTO {table_name} ({keystr}) VALUES {valstr}"
+        cursor.execute(insert_sql)
         self.connection.commit()
         cursor.close()
 
@@ -58,7 +86,7 @@ class MySQL(object):
                     return "''"
                 else:
                     return "'"+feild.value+"'"
-                
+
     def delete(self, table_name, id):
         cursor = self.connection.cursor()
         sql = f"delete FROM {table_name} WHERE id={id}"
@@ -73,7 +101,7 @@ class MySQL(object):
         result = cursor.fetchone()
         dict_data = {}
         for d in data:
-            dict_data[d.name] = self.__getFieldVale(d)             
+            dict_data[d.name] = self.__getFieldVale(d)
         if result[0] > 0:
             val_sql = ', '.join(
                 [f"{key} = {dict_data[key]} " for key in dict_data.keys()])
@@ -81,7 +109,8 @@ class MySQL(object):
             cursor.execute(update_sql)
         else:
             fields = ', '.join([f"{key} " for key in dict_data.keys()])
-            values = ', '.join([f"{dict_data[key]}" for key in dict_data.keys()])
+            values = ', '.join(
+                [f"{dict_data[key]}" for key in dict_data.keys()])
             insert_sql = f"INSERT INTO {table_name}({fields}) VALUE({values})"
             cursor.execute(insert_sql)
         self.connection.commit()
