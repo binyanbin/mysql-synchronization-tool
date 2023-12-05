@@ -12,8 +12,6 @@ sync_list = [{"table": "pl_branch", "keys": ["id", "name", "introduce", "phone",
                                              "updated_by", "updated_time", "address", "longitudeAndlatitude", "active_time"]}]
 
 split_table = 2
-dict_data = {}
-
 
 def fullsycn(table_name: str, keys: list,  size: int):
     pageindex = 0
@@ -27,6 +25,7 @@ def fullsycn(table_name: str, keys: list,  size: int):
             if len(results) == 0:
                 find = False
             else:
+                dict_data = {}
                 for row in results:
                     m = row[0] % split_table
                     if dict_data.get(str(m)) is not None:
@@ -34,12 +33,11 @@ def fullsycn(table_name: str, keys: list,  size: int):
                     else:
                         dict_data[str(m)] = []
                         dict_data[str(m)].append(row)
+                for key in dict_data.keys():
+                    if len(dict_data[key]) > 0:
+                        target.insert(table_name=table_name+key,
+                                    fields=keys, data=dict_data[key])                        
                 pageindex = pageindex + 1
-            for key in dict_data.keys():
-                if len(dict_data[key]) > 0:
-                    target.insert(table_name=table_name+key,
-                                  fields=keys, data=dict_data[key])
-
     except Exception as e:
         print(e.args)
 
