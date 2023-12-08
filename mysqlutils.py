@@ -16,6 +16,7 @@ class MySQL(object):
     def close(self):
         self.connection.close()
 
+
     def connect(self):
         self.connection.connect()
 
